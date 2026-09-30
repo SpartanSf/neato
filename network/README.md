@@ -8,8 +8,8 @@ abstraction layer, designed to be used with the built-in `io.broadcastLocal(argu
 future wireless equivalents. The module defines the protocols used in each Internet Protocol Suite layer. Programs are
 welcome to implement their own protocols on any layer they like, but these standard protocols are designed so that a)
 program developers do not have to reinvent the wheel every time and b) programs that use the same protocol can
-interoperate. In the future, NEATO API modules should be specified to add abstraction for each protocol so that
-developers do not have to reimplement them.
+interoperate. Each protocol that has an API for programs to use it is a NEATO extension (for example, `ext.dpp`), so an operating
+system that does not implement it simply does not report it.
 
 ## Protocol specifications:
 
@@ -34,7 +34,7 @@ these protocols directly, routing the packet's payload to the program that is li
 and sending transport-layer packets based on the data that the program sends and the destination.
 
 - [Direct Payload Protocol (dpp.md)](dpp.md) - A connectionless transport-layer protocol comparable to the real-life
-  User Datagram Protocol.
+  User Datagram Protocol. It is the NEATO extension `ext.dpp`.
 
 ### Application Layer
 

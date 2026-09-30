@@ -2,7 +2,9 @@
 
 Written by piguman3
 
-Revision 3 of September 29, 2026
+Extension: `core`
+
+Version: 1
 
 ---
 
