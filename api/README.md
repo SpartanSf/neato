@@ -30,9 +30,9 @@ reserved extension names until they are abstracted.
 - [Events (event.md)](event.md) - Input and other events delivered to a program.
 - [Files (fs.md)](fs.md) - Files and directories, using the [paths](../common/paths.md) format.
 - [Current working directory (cwd.md)](cwd.md) - The directory the application was launched in.
-
+- [Cryptography (crypto.md)](crypto.md) - Cryptography functions.
+ 
 ### Extensions
 
-- [Cryptography (crypto.md)](crypto.md) - `ext.crypto`
 - [Screen (screen.md)](screen.md) - `ext.screen`
 - [Direct Payload Protocol (../network/dpp.md)](../network/dpp.md) - `ext.dpp`
