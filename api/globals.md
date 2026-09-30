@@ -2,7 +2,7 @@
 
 Written by piguman3
 
-Revision 1 of September 18, 2026
+Revision 2 of September 29, 2026
 
 ---
 
@@ -12,7 +12,7 @@ This file is a general specification of the entire global environment that a NEA
 
 ### NEET specific (ones modified or removed by NEATO aren't on this list)
 
-Everything marked as "Unfinished" still needs to be thought out more, as we need to allow OSes to build abstractions and privilige layers, but most of these functions access the "hardware" directly with no protections.
+Everything marked as "Unfinished" still needs to be thought out more, as we need to allow OSes to build abstractions and privilege layers, but most of these functions access the "hardware" directly with no protections.
 
 ```c
 // Unfinished
@@ -151,11 +151,11 @@ term
   getSize
   clearLine
   setCursorPos
+  getCursorPos
   setBackgroundColor
+  getBackgroundColor
   setTextColor
-  setCursorPos
-  setBackgroundColor
-  setTextColor
+  getTextColor
   scroll
 print
 

@@ -12,7 +12,7 @@ For example, in a GUI based operating system with applications that each get the
 of the mouse event to be offset by the window's position, and the graphics API to use a specific layer for the window,
 rather than the main global layer, and remain NEATO compliant.
 
-Arguably the most important spec in the NEATO API is [globals](globals.md), as it defines the entirety of the NEATO environment for clarity, including things that might not have explicit API specs for whatever reason. 
+Arguably the most important spec in the NEATO API is [globals](globals.md), as it defines the entirety of the NEATO environment for clarity, including things that might not have explicit API specs for whatever reason.
 
 ### Changes to the default API:
 
