@@ -1,16 +1,14 @@
 # NEATO `crypto` API Specification
 
-Extension: `ext.crypto`
+Extension: `core`
 
 Version: 1
 
 ---
 
-An environment that reports `ext.crypto` must provide the global `crypto` table exactly as provided by the NEET
+A NEATO environment must provide the global `crypto` table exactly as provided by the NEET
 Computers API. These functions only compute on data and do not touch the "hardware" of the computer, so they do not
 need any protection layer.
-
-Requires: `core`
 
 ```c
 crypto
