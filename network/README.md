@@ -1,4 +1,4 @@
-# NEATO API
+# NEATO Network
 
 NEATO specifications for networking protocols.
 
@@ -28,8 +28,8 @@ networks will function in NEET._
 
 ### Transport Layer
 
-The internet layer consists of protocols for providing communication services between applications, typically by
-allowing applications to send packets to and listening for packets on ports. The operating system should handle
+The transport layer consists of protocols for providing communication services between applications, typically by
+allowing applications to send packets to, and listen for packets on, ports. The operating system should handle
 these protocols directly, routing the packet's payload to the program that is listening on the specified port,
 and sending transport-layer packets based on the data that the program sends and the destination.
 
