@@ -24,6 +24,9 @@ A full path is written `disk:partition:filepath`.
   - the word `any`, which is not a disk but a search. It refers to the first disk, in ascending order of slot, that
     has a partition with the given name. If there is no such disk the path is invalid for lookups. `any` is decided
     once for each operation, before the operation starts.
+  - a disk slot number, a non-negative integer that identifies the disk by its current slot. Slot numbers may change
+    when disks are added, removed, or reordered, so programs and configuration files that need to refer to a disk
+    over time should use its ID instead.
 - `partition` is the name of a partition.
 - `filepath` always begins with `/`, and is a list of names separated by `/`. A name cannot be empty or contain `/`,
   `:` or control characters. A path that ends in `/` refers to a directory. `.` refers to the same directory, and `..`
