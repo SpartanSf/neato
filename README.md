@@ -37,7 +37,7 @@ There are three kinds of name:
 | Name                | Meaning                                                                                     |
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | `core`              | The mandatory base. Every NEATO environment provides it.                                    |
-| `ext.<name>`        | A standard extension, defined by a specification in this repository. Example: `ext.crypto`. |
+| `ext.<name>`        | A standard extension, defined by a specification in this repository. Example: `ext.screen`. |
 | `x.<vendor>.<name>` | A non-standard extension defined by an OS or a third party. Example: `x.neetos.windows`.    |
 
 Names are case sensitive and every segment consists only of letters and digits.
@@ -45,8 +45,8 @@ Names are case sensitive and every segment consists only of letters and digits.
 Querying. A program finds out what it is running on with the `sys` API (see [sys.md](api/sys.md)):
 
 ```lua
-if sys.hasExtension("ext.crypto", 1) then
-  -- safe to use the crypto API
+if sys.hasExtension("ext.screen", 1) then
+  -- safe to use the screen API
 end
 ```
 
@@ -74,7 +74,6 @@ report them as supported. This keeps the names free until a specification is wri
 | Name         | Version | Requires | Specification                                     | Contents                                                               |
 | ------------ | ------- | -------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
 | `core`       | 1       |          | [api/](api/README.md), [common/](common/paths.md) | Lua environment, `sys`, `event`, `term`, `fs`, `print`, `CWD`, paths   |
-| `ext.crypto` | 1       | `core`   | [api/crypto.md](api/crypto.md)                    | NEET Computers `crypto` API.                                           |
 | `ext.screen` | 1       | `core`   | [api/screen.md](api/screen.md)                    | NEET Computers `screen` API, possibly redirected to a window or layer. |
 | `ext.dpp`    | 1       | `core`   | [network/dpp.md](network/dpp.md)                  | Direct Payload Protocol.                                               |
 
