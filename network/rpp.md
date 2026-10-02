@@ -22,7 +22,7 @@ addresses, so every message sent with `io.broadcastLocal` or an Access Point rea
 nobody can say who sent it (see [Media](spp-remote.md#media)). RPP builds addressing on top of that, and nothing else
 is needed from the medium.
 
-RPP is meant to be small. NEET networks are small (tens of computers, a few hops), the medium throws away messages when
+RPP is meant to be small. NEET networks are small (hundreds of computers, tens of hops), the medium throws away messages when
 a computer's queue of 75 events fills up, and a routing protocol that talks a lot would make that worse. So there are no
 prefixes or subnets, no name service, and only one kind of routing: periodic distance vectors with a hop limit.
 
@@ -112,7 +112,7 @@ An RPP packet is one frame:
 | 1        | protocol    | string  | Always `"rpp"`.                                                                                                              |
 | 2        | destination | string  | Address of the host the packet is for, or the broadcast address.                                                             |
 | 3        | source      | string  | Address of the host that made the packet. A router leaves it as it is.                                                       |
-| 4        | ttl         | integer | Hops the packet may still make, 1 to 16. A router lowers it by one.                                                          |
+| 4        | ttl         | integer | Hops the packet may still make, 1 to 256. A router lowers it by one.                                                         |
 | 5        | next        | string  | Address of the neighbour that must handle the packet next, or the broadcast address.                                         |
 | 6 and on | transport   | values  | One complete frame of a transport protocol. Its first value, at position 6, names the protocol: `"dpp"`, `"spp"` or `"rcp"`. |
 
@@ -125,7 +125,7 @@ neighbour they are equal.
 
 A packet is valid only if the first value is `"rpp"`, `destination`, `source` and `next` are addresses (and `source`
 is not the broadcast address), `next` is the broadcast address exactly when `destination` is, `ttl` is an integer from 1
-to 16, there is a transport frame, and the frame follows [wire.md](wire.md#frames). A host drops packets that are not
+to 256, there is a transport frame, and the frame follows [wire.md](wire.md#frames). A host drops packets that are not
 valid without answering them.
 
 ---
@@ -153,7 +153,7 @@ every queue with error messages. A program can see the cause with `rpp.ping` and
 A host that sends a packet to another host looks the destination up. If it is a bidirectional neighbour,
 `next` is the destination. If there is a route, `next` is the route's next hop. If neither, the send fails with
 `unreachable` at once. A packet to the broadcast address is sent with `next` set to the broadcast address, on every
-interface. `ttl` starts at 16, except for control frames to the broadcast address, which are always sent with 1.
+interface. `ttl` starts at 256, except for control frames to the broadcast address, which are always sent with 1.
 
 A packet to the host's own address is never sent. The routing table does not contain the host's own address, so the send
 fails with `unreachable`. Connections between programs on the same computer are `ext.spp` with scope `"local"` and never
@@ -168,7 +168,7 @@ echo. They are carried in RPP packets like any other transport frame.
 
 | Frame                              | Values                       | Meaning                                                                                                    |
 | ---------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `("rcp", "hello", role, heard)`    | role: `"h"` or `"r"`<br>heard: string | A host announces itself. `role` is `"r"` for a router and `"h"` for an end host. `heard` is a comma separated list of the addresses that the host has heard on this interface in the last 120 seconds, at most 100, or `""`. |
+| `("rcp", "hello", role, heard)`    | role: `"h"` or `"r"`<br>heard: string | A host announces itself. `role` is `"r"` for a router and `"h"` for an end host. `heard` is a comma separated list of the addresses that the host has heard on this interface in the last 120 seconds, at most 300, or `""`. |
 | `("rcp", "vector", entries)`       | string                       | A router tells its neighbours what it can reach. Entries are comma separated, and each is `address:metric:via` (see [Routes](#routes)), at most 140 entries. A longer table is sent in several frames. |
 | `("rcp", "echo", id)`              | id: string, 1 to 16 characters from `0-9a-f` | Asks the destination to answer.                                                          |
 | `("rcp", "echoreply", id)`         | the same string              | The answer to an echo, sent to the address the echo came from.                                              |
@@ -192,38 +192,42 @@ the last frame.
 - On `wireless` a neighbour is bidirectional, and so usable as a next hop, only if its latest `hello` lists the
   host's own address. That is how a link that works in one direction is kept out of the routing table. On `wired` a link
   always works in both directions, so a neighbour that has been heard is bidirectional at once.
-- A host that has more than 100 neighbours on one interface cannot list them all in `heard`, so more than about 100 hosts
-  in one wireless range is not supported by version 1.
+- A `hello` carries the whole `heard` list as one string, and a frame limits a string to 4096 characters, so at most
+  about 300 addresses fit. A host with more neighbours cannot list them all, and more than about 300 hosts in one
+  wireless range is not supported by version 1. The practical limit is lower, because a queue of 75 events drops
+  messages when a dense range is busy, so a large range should be split by routers into smaller segments.
 
 ---
 
 ### Routes
 
 A host keeps a table of destinations it can reach: `address`, `next` (the neighbour to hand the packet to), the
-interface, `metric` (the number of hops, 1 to 15) and when it was last refreshed.
+interface, `metric` (the number of hops, 1 to 255) and when it was last refreshed.
 
 - Every bidirectional neighbour is a route of metric 1 with itself as the next hop. The host does not need a router to
   reach it.
 - Only routers send `vector` frames. They send one every 30 seconds (with the same random delay as `hello`), and
   also, at most once every 5 seconds on each interface, when a route has changed. A vector lists every route in the
   table, each as `address:metric:via`, where `via` is the next hop that the router uses for that destination. It also
-  lists, with metric 16, every route that the router has removed since its previous vector. A router's own neighbours
+  lists, with metric 256, every route that the router has removed since its previous vector. A router's own neighbours
   are listed with `via` equal to the neighbour itself.
 - A host that hears a `vector` from a bidirectional neighbour N considers each entry `address:metric:via`:
   - It skips the entry if `address` is its own, or if `via` is its own address. The second rule keeps two hosts from
     sending traffic back and forth to each other for a destination that each thinks the other reaches. This is the
     version of split horizon that works on a medium where everyone hears everyone.
-  - The new metric is `metric + 1`. If it is 16 or more, the destination is unreachable through N. If the host's route
-    to that destination uses N as next hop, the host removes it, and it is announced in the next vector with metric 16.
+  - The new metric is `metric + 1`. If it is 256 or more, the destination is unreachable through N. If the host's route
+    to that destination uses N as next hop, the host removes it, and it is announced in the next vector with metric 256.
   - Otherwise, the route is installed if the host has none, or if the new metric is lower than the old one, or if N is
     already the route's next hop (in which case it is only refreshed, and updated if the metric has changed). In every
     case the route is marked as refreshed now.
-- A route that has not been refreshed for 180 seconds is removed, and announced with metric 16. A route is also
+- A route that has not been refreshed for 180 seconds is removed, and announced with metric 256. A route is also
   removed when its next hop is forgotten.
 - Routes that tie are decided in favour of the one that exists already.
 
-The largest metric is 15, so a network is at most 15 hops across. When a loop is made by something larger than two hosts
-the routes count up to 16 and are then thrown away, the usual weakness of distance vectors.
+The largest metric is 255, so a network is at most 255 hops across. When a loop is made by something larger than two
+hosts the routes count up to 256 and are then thrown away, the usual weakness of distance vectors. With this ceiling a
+loop can take many vector rounds to count to infinity, so the 120 and 180 second timeouts, not the metric, are what free
+a broken route, and a network should still be kept small.
 A simulation of four routers in a chain, with one link cut, had every stale route gone after about three minutes: the 120
 seconds until the neighbour was forgotten, plus a few vector rounds to carry the withdrawal along. It also showed
 that a one-way wireless link is kept out of every table by the `heard` check.
@@ -245,7 +249,7 @@ which is why a vector has to be sent in pieces when there are more than 140 host
 | Triggered vector           | at most once per 5 s per interface   |
 | Route timeout              | 180 s                                |
 | Address change delay       | 0 to 5 s                             |
-| Largest metric / ttl       | 15 / 16                              |
+| Largest metric / ttl       | 255 / 256                            |
 
 ---
 
