@@ -8,7 +8,7 @@ Version: 1
 
 Requires: `core`
 
-Status: draft. An OS must not report `ext.rpp` until this notice is removed (see [Open questions](#open-questions)).
+Status: draft. An OS must not report `ext.rpp` until this notice is removed.
 
 ---
 

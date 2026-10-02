@@ -15,10 +15,6 @@ This specification describes how [SPP](spp.md) connections are made between prog
 adds nothing to the `spp` API. It makes `scope = "network"` work on `spp.listen` and `spp.connect`, which without this
 extension fail with `unsupported`. Programs written for `ext.spp` need no changes.
 
-The transport rules here are written against how the NEET Computers mod passes messages today (see [Media](#media)
-and [wire.md](wire.md)), not against how it was assumed to work. Where a statement depends on something that has not
-been verified, it is listed under [Open questions](#open-questions).
-
 SPP frames can travel in two ways. Where the OS has [`ext.rpp`](rpp.md), every frame is carried in an RPP packet, so
 that it can be addressed to one host and routed across several (see [With RPP](#with-rpp)). Where it has not, frames are
 sent directly on the medium and reach every host that can hear them (see [Without RPP](#without-rpp)).
