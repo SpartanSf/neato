@@ -83,6 +83,23 @@ dpp
   listen
   unlisten
   send
+
+// ext.spp, defined in network/spp.md
+spp
+  listen
+  connect
+  poll
+  getLimits
+
+// ext.rpp, defined in network/rpp.md
+rpp
+  getAddress
+  getInterfaces
+  getNeighbors
+  getRoutes
+  isRouter
+  setRouter
+  ping
 ```
 
 ### Reserved core names (not yet specified)

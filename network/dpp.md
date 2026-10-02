@@ -10,10 +10,11 @@ Requires: `core`
 
 ---
 
-This specification defines a connectionless transport-layer protocol comparable to the real-life User Datagram
-Protocol, called the Direct Payload Protocol, or DPP. It is a protocol without handshaking which in real networking
-would be referred to as unreliable due to its lack of protection from data loss, but because NEET Computers does not
-have any data loss, it does in practice guarantee data integrity.
+This specification defines a connectionless transport-layer protocol comparable to the real-life User Datagram Protocol,
+called the Direct Payload Protocol, or DPP. It is a protocol without handshaking which in real networking would be
+referred to as unreliable due to its lack of protection from data loss, and because the NEET Computers media can lose a
+message when the receiving computer's event queue is full (see [Loss](spp-remote.md#loss)), it does not guarantee
+delivery in practice either. A program that needs delivery to be guaranteed uses [SPP](spp.md).
 
 An operating system that reports `ext.dpp` must provide the `dpp` API described at the end of this file, and must
 handle DPP messages as described here.

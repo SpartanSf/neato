@@ -36,3 +36,5 @@ reserved extension names until they are abstracted.
 
 - [Screen (screen.md)](screen.md) - `ext.screen`
 - [Direct Payload Protocol (../network/dpp.md)](../network/dpp.md) - `ext.dpp`
+- [Sequenced Payload Protocol (../network/spp.md)](../network/spp.md) - `ext.spp`
+- [Routed Packet Protocol (../network/rpp.md)](../network/rpp.md) - `ext.rpp`
