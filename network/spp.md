@@ -276,7 +276,7 @@ while true do
       local msg, code = h:recv(0)
       if msg ~= nil then
         h:send({ "echo", msg }, 0)
-      elseif code == "closed" or code == "reset" then
+      elseif code == "EPIPE" or code == "ECONNRESET" then
         h:close()
         for i, c in ipairs(conns) do if c == h then table.remove(conns, i) break end end
       end

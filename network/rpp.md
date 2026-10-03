@@ -169,7 +169,7 @@ echo. They are carried in RPP packets like any other transport frame.
 | Frame                           | Values                                       | Meaning                                                                                                                                                                                                                      |
 | ------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `("rcp", "hello", role, heard)` | role: `"h"` or `"r"`<br>heard: string        | A host announces itself. `role` is `"r"` for a router and `"h"` for an end host. `heard` is a comma separated list of the addresses that the host has heard on this interface in the last 120 seconds, at most 300, or `""`. |
-| `("rcp", "vector", entries)`    | string                                       | A router tells its neighbours what it can reach. Entries are comma separated, and each is `address:metric:via` (see [Routes](#routes)), at most 140 entries. A longer table is sent in several frames.                       |
+| `("rcp", "vector", entries)`    | string                                       | A router tells its neighbours what it can reach. Entries are comma separated, and each is `address:metric:via` (see [Routes](#routes)), at most 136 entries. A longer table is sent in several frames.                       |
 | `("rcp", "echo", id)`           | id: string, 1 to 16 characters from `0-9a-f` | Asks the destination to answer.                                                                                                                                                                                              |
 | `("rcp", "echoreply", id)`      | the same string                              | The answer to an echo, sent to the address the echo came from.                                                                                                                                                               |
 
@@ -233,7 +233,7 @@ seconds until the neighbour was forgotten, plus a few vector rounds to carry the
 that a one-way wireless link is kept out of every table by the `heard` check.
 
 A default route and summaries are not part of this version. Every host a router can reach has an entry of its own,
-which is why a vector has to be sent in pieces when there are more than 140 hosts.
+which is why a vector has to be sent in pieces when there are more than 136 hosts.
 
 ---
 

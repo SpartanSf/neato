@@ -51,5 +51,5 @@ for name, version in pairs(sys.getExtensions()) do
   print(name, version)
 end
   -> core  2
-     ext.crypto  1
+     ext.screen  1
 ```

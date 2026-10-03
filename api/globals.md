@@ -59,6 +59,9 @@ fs
   getPoint
   getPoints
 
+// Defined in api/crypto.md
+crypto
+
 // Defined in api/term.md
 term
   clear
@@ -78,9 +81,6 @@ print
 ### Extension globals
 
 ```c
-// ext.crypto, defined in api/crypto.md
-crypto
-
 // ext.screen, defined in api/screen.md
 screen
 
