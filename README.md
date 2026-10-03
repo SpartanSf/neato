@@ -72,12 +72,12 @@ keeps the names free until a specification is written and final.
 
 ### Extension registry
 
-| Name         | Version | Requires | Specification                                     | Contents                                                               |
-| ------------ | ------- | -------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
-| `core`       | 1       |          | [api/](api/README.md), [common/](common/paths.md) | Lua environment, `sys`, `event`, `term`, `fs`, `print`, `CWD`, paths   |
-| `ext.screen` | 1       | `core`   | [api/screen.md](api/screen.md)                    | NEET Computers `screen` API, possibly redirected to a window or layer. |
-| `ext.dpp`    | 1       | `core`   | [network/dpp.md](network/dpp.md)                  | Direct Payload Protocol.                                               |
-| `ext.spp`    | 1       | `core`   | [network/spp.md](network/spp.md)                  | Sequenced Payload Protocol: reliable local connections, pollable handles, peer identity. |
+| Name         | Version | Requires | Specification                                                                                   | Contents                                                                                 |
+| ------------ | ------- | -------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `core`       | 2       |          | [api/](api/README.md), [common/paths.md](common/paths.md), [common/errors.md](common/errors.md) | Lua environment, `sys`, `event`, `term`, `fs`, `print`, `CWD`, paths, error codes        |
+| `ext.screen` | 1       | `core`   | [api/screen.md](api/screen.md)                                                                  | NEET Computers `screen` API, possibly redirected to a window or layer.                   |
+| `ext.dpp`    | 2       | `core`   | [network/dpp.md](network/dpp.md)                                                                | Direct Payload Protocol.                                                                 |
+| `ext.spp`    | 2       | `core`   | [network/spp.md](network/spp.md)                                                                | Sequenced Payload Protocol: reliable local connections, pollable handles, peer identity. |
 
 #### Drafts
 

@@ -4,7 +4,7 @@ Author: XesHuman
 
 Extension: `ext.spp`
 
-Version: 1
+Version: 2
 
 Requires: `core`
 
@@ -64,7 +64,7 @@ whatever its scope. A connecting program does not choose its own port. The opera
 free local port, which the program can read as `conn.port`.
 
 An operating system may refuse to let a program listen on certain ports (for example 1 to 1023 for programs that are
-not administrative), in which case `spp.listen` fails with `denied`. The ports are released when the listener is
+not administrative), in which case `spp.listen` fails with `EACCES`. The ports are released when the listener is
 closed or the program ends.
 
 ---
@@ -73,10 +73,10 @@ closed or the program ends.
 
 A *scope* says which computers are involved. There are two:
 
-| Scope       | Meaning                                                                                       |
-| ----------- | --------------------------------------------------------------------------------------------- |
-| `"local"`   | Only programs on this computer. No network traffic is ever produced or accepted. |
-| `"network"` | Programs on other computers. Requires `ext.sppRemote`. Without it, the scope is `unsupported`. |
+| Scope       | Meaning                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| `"local"`   | Only programs on this computer. No network traffic is ever produced or accepted.           |
+| `"network"` | Programs on other computers. Requires `ext.sppRemote`. Without it, the scope is `ENOTSUP`. |
 
 - `spp.listen` takes a scope that decides who may connect: `"local"` accepts connections from programs on this
   computer, `"network"` accepts them from this computer and from other computers. The default is `"local"`.
@@ -86,7 +86,7 @@ A *scope* says which computers are involved. There are two:
   `"network"` only looks on other computers and never on this one. The default is `"local"`. A program that does not
   care where its service runs tries one and then the other.
 - A connection attempt that no listener on the chosen scope admits (nothing listens on the port, or the listener's
-  scope is `"local"` and the attempt comes from another computer) fails with `refused` if it is local. Remote
+  scope is `"local"` and the attempt comes from another computer) fails with `ECONNREFUSED` if it is local. Remote
   attempts are not answered at all, so a computer does not reveal which ports it uses (see `ext.sppRemote`).
 
 ---
@@ -135,7 +135,7 @@ as two separate copies.
 
 Within one connection every message that is sent is received exactly once and in the order it was sent, for as long
 as the connection is not `reset`. There is no loss, duplication or reordering to handle. A single payload has a size
-limit (see `spp.getLimits` and `conn.maxPayload`), and `conn:send` fails with `toolarge` if it is exceeded.
+limit (see `spp.getLimits` and `conn.maxPayload`), and `conn:send` fails with `EMSGSIZE` if it is exceeded.
 
 Each connection has an inbox on the receiving side, with room for at least 16 messages
 (operating systems may allow more, and report it with `spp.getLimits`). When the inbox of the peer is full, `conn:send`
@@ -146,13 +146,13 @@ waits (yields) until there is room or its timeout passes. Messages are never dro
 ### Closing
 
 `conn:close()` ends the connection in an orderly way. Messages the program already sent are still delivered. The peer
-reads them and then gets `closed` from `conn:recv`. Messages that were waiting in the closing program's own inbox are
-discarded. `closed` is also what `conn:send` returns when the peer has closed.
+reads them and then gets `EPIPE` from `conn:recv`. Messages that were waiting in the closing program's own inbox are
+discarded. `EPIPE` is also what `conn:send` returns when the peer has closed.
 
-A connection can also end badly, which is called a `reset`: the peer program was killed in a way that stopped it from
+A connection can also end badly, which is called a reset (its code is `ECONNRESET`): the peer program was killed in a way that stopped it from
 closing, the operating system had to drop the connection (for example, a resource limit), or, with `ext.sppRemote`,
 the remote computer stopped answering. Messages that were not yet delivered may be lost. Every later call on that
-connection returns `reset`.
+connection returns `ECONNRESET`.
 
 `listener:close()` releases the port. Connections that were waiting to be accepted are reset, and connections that were
 already accepted are not affected.
@@ -166,11 +166,11 @@ on any one of them, and can wait for the keyboard at the same time.
 
 A handle counts as readable when the matching call would not have to wait:
 
-| Handle                | Readable when                                                                                      |
-| --------------------- | -------------------------------------------------------------------------------------------------- |
-| listener              | A connection is waiting for `accept`.                                                              |
-| connection            | `conn:recv` has something to return: a message is in the inbox, or the connection is closed or reset. |
-| the string `"event"`  | The program's [event queue](../api/event.md) has at least one event. Nothing is removed from it.    |
+| Handle               | Readable when                                                                                         |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| listener             | A connection is waiting for `accept`.                                                                 |
+| connection           | `conn:recv` has something to return: a message is in the inbox, or the connection is closed or reset. |
+| the string `"event"` | The program's [event queue](../api/event.md) has at least one event. Nothing is removed from it.      |
 
 A connection counts as writable when `conn:send` would not have to wait: the peer's inbox has room, or the
 connection is closed or reset (in which case `send` fails immediately).
@@ -182,12 +182,12 @@ Polling only reports readiness. It never consumes a message, an event or a pendi
 
 ### The `spp` API
 
-| Name           | Description                                                                                                                                                                                                                                          | Arguments                                              | Returns                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------- |
-| spp.listen     | Starts listening on a port. `opts.scope` is `"local"` (default) or `"network"`. `opts.backlog` is how many connections may wait to be accepted (at least 1, limited by the operating system).                                                        | port (int), opts (table?)                              | listener, or nil, code and message                                     |
-| spp.connect    | Connects to a listener. Yields until the connection is made, refused, or `opts.timeout` seconds pass (the default is up to the operating system). `opts.scope` is `"local"` (default) or `"network"`. `opts.host` is the address of a host (a string). It needs `ext.rpp` and `scope = "network"`: without `ext.rpp` a host that is not `nil` fails with `unsupported`, and with scope `"local"` it fails with `invalid`. | port (int), opts (table?)                              | connection, or nil, code and message                                   |
-| spp.poll       | Waits until a handle in `read` is readable or a handle in `write` is writable, or until `timeout` seconds have passed. `read` may also contain the string `"event"`. Yields while waiting.                                                          | read (table?), timeout (number?), write (table?)       | readable (table), writable (table), or nil if the timeout passed first |
-| spp.getLimits  | Returns the limits of this operating system.                                                                                                                                                                                                        | none                                                   | `{maxPayload = int, inbox = int, backlog = int, maxConnections = int}` |
+| Name          | Description                                                                                                                                                                                                                                                                                                                                                                                                          | Arguments                                        | Returns                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| spp.listen    | Starts listening on a port. `opts.scope` is `"local"` (default) or `"network"`. `opts.backlog` is how many connections may wait to be accepted (at least 1, limited by the operating system).                                                                                                                                                                                                                        | port (int), opts (table?)                        | listener, or nil, code and message                                     |
+| spp.connect   | Connects to a listener. Yields until the connection is made, refused, or `opts.timeout` seconds pass (the default is up to the operating system). `opts.scope` is `"local"` (default) or `"network"`. `opts.host` is the address of a host (a string). It needs `ext.rpp` and `scope = "network"`: without `ext.rpp` a host that is not `nil` fails with `ENOTSUP`, and with scope `"local"` it fails with `EINVAL`. | port (int), opts (table?)                        | connection, or nil, code and message                                   |
+| spp.poll      | Waits until a handle in `read` is readable or a handle in `write` is writable, or until `timeout` seconds have passed. `read` may also contain the string `"event"`. Yields while waiting.                                                                                                                                                                                                                           | read (table?), timeout (number?), write (table?) | readable (table), writable (table), or nil if the timeout passed first |
+| spp.getLimits | Returns the limits of this operating system.                                                                                                                                                                                                                                                                                                                                                                         | none                                             | `{maxPayload = int, inbox = int, backlog = int, maxConnections = int}` |
 
 `maxPayload` is the largest payload that can be sent, as the operating system measures it in bytes. For a local
 connection it may be treated as approximate. For a connection to another computer it is exact: the size of a payload is
@@ -197,18 +197,18 @@ many handles one program may hold at the same time.
 
 Listener (`kind = "listener"`, with read-only fields `port` and `scope`):
 
-| Name            | Description                                                                                                   | Arguments        | Returns                                  |
-| --------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------- |
-| listener:accept | Takes the oldest waiting connection. Waits for one to arrive, for at most `timeout` seconds if it is given. | timeout (number?) | connection, or nil, code and message     |
-| listener:close  | Closes the listener. See [Closing](#closing).                                                                 | none             | true                                     |
+| Name            | Description                                                                                                 | Arguments         | Returns                              |
+| --------------- | ----------------------------------------------------------------------------------------------------------- | ----------------- | ------------------------------------ |
+| listener:accept | Takes the oldest waiting connection. Waits for one to arrive, for at most `timeout` seconds if it is given. | timeout (number?) | connection, or nil, code and message |
+| listener:close  | Closes the listener. See [Closing](#closing).                                                               | none              | true                                 |
 
 Connection (`kind = "connection"`, with read-only fields `port`, `peerPort`, `peer` and `maxPayload`):
 
-| Name       | Description                                                                                                                             | Arguments                     | Returns                              |
-| ---------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------ |
-| conn:send  | Sends one message. Waits while the peer's inbox is full, for at most `timeout` seconds if it is given.                                  | payload (any), timeout (number?) | true, or nil, code and message       |
-| conn:recv  | Takes the next message out of the inbox. Waits for one to arrive, for at most `timeout` seconds if it is given.                          | timeout (number?)             | payload (any), or nil, code and message |
-| conn:close | Closes the connection. See [Closing](#closing). Calling it again on a closed handle raises an error, as for every handle.               | none                          | true                                 |
+| Name       | Description                                                                                                               | Arguments                        | Returns                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | --------------------------------------- |
+| conn:send  | Sends one message. Waits while the peer's inbox is full, for at most `timeout` seconds if it is given.                    | payload (any), timeout (number?) | true, or nil, code and message          |
+| conn:recv  | Takes the next message out of the inbox. Waits for one to arrive, for at most `timeout` seconds if it is given.           | timeout (number?)                | payload (any), or nil, code and message |
+| conn:close | Closes the connection. See [Closing](#closing). Calling it again on a closed handle raises an error, as for every handle. | none                             | true                                    |
 
 `conn.maxPayload` is the largest payload that `conn:send` accepts on this connection. It is at most `maxPayload` from
 `spp.getLimits`, and is smaller for a connection to another computer (see [`ext.sppRemote`](spp-remote.md)).
@@ -217,30 +217,30 @@ Connection (`kind = "connection"`, with read-only fields `port`, `peerPort`, `pe
 gave the connecting program.
 
 A `timeout` of `nil` means to wait without limit, and `0` means never to wait: the call returns at once with
-`timeout` if it would have had to wait. A `payload` of `false` is a valid message, so a program must check the first
+`ETIMEDOUT` if it would have had to wait. A `payload` of `false` is a valid message, so a program must check the first
 result against `nil` and not for truthiness.
 
 ---
 
 ### Failure codes
 
-Functions that can fail return `nil`, then a code, then a human readable message, like the other NEATO APIs
-return `nil` and a message. Unlike those messages, the code is part of this specification and a program may compare it.
-The message is only for humans.
+Functions that can fail return `nil`, then a code, then a human readable message, as defined in
+[errors.md](../common/errors.md). The code is part of the NEATO error registry and a program may compare it; the message
+is only for humans. The codes SPP uses, and the condition each one reports, are:
 
-| Code          | Meaning                                                                                                              |
-| ------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `timeout`     | The timeout passed before the call could finish.                                                                      |
-| `closed`      | The connection was closed in an orderly way. For `recv`, all messages that were sent before it have been read.       |
-| `reset`       | The connection ended abnormally. See [Closing](#closing).                                                            |
-| `refused`     | Nothing admitted the connection: no listener, or its scope does not allow this attempt.                              |
-| `inuse`       | Another listener already owns the port.                                                                               |
-| `denied`      | The operating system does not allow this program to do this (for example, a privileged port).                        |
-| `invalid`     | A port, option or payload is not valid. A payload that is not allowed is `invalid`, a port out of range is `invalid`. |
-| `toolarge`    | The payload is larger than `maxPayload`.                                                                              |
-| `unsupported` | The operating system does not support this scope or option (for example `"network"` without `ext.sppRemote`).         |
-| `unreachable` | There is no route to `opts.host`. Only with `ext.rpp`.                                                                |
-| `limit`       | A limit was reached, such as `maxConnections`, or no free local port.                                                  |
+| Code           | Meaning in SPP                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------- |
+| `ETIMEDOUT`    | The timeout passed before the call could finish.                                                               |
+| `EPIPE`        | The connection was closed in an orderly way. For `recv`, all messages that were sent before it have been read. |
+| `ECONNRESET`   | The connection ended abnormally. See [Closing](#closing).                                                      |
+| `ECONNREFUSED` | Nothing admitted the connection: no listener, or its scope does not allow this attempt.                        |
+| `EADDRINUSE`   | Another listener already owns the port.                                                                        |
+| `EACCES`       | The operating system does not allow this program to do this (for example, a privileged port).                  |
+| `EINVAL`       | A port, option or payload is not valid.                                                                        |
+| `EMSGSIZE`     | The payload is larger than `maxPayload`.                                                                       |
+| `ENOTSUP`      | The operating system does not support this scope or option (for example `"network"` without `ext.sppRemote`).  |
+| `EHOSTUNREACH` | There is no route to `opts.host`. Only with `ext.rpp`.                                                         |
+| `ELIMIT`       | A limit was reached, such as `maxConnections`, or no free local port.                                          |
 
 Passing a value of the wrong type (a port that is not a number, a `timeout` that is not a number) raises an error
 instead, like the rest of NEATO.

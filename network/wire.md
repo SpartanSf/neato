@@ -38,7 +38,8 @@ must follow all of these rules. A receiver drops a frame that breaks one, withou
    does not know it ignores the frame.
 
 The sender checks these rules too. A frame that breaks them is not sent, and the call that wanted to send it fails with
-`invalid` (or `toolarge`, if only a size rule is broken).
+`EINVAL` (or `EMSGSIZE`, if only a size rule is broken). These are the shared NEATO codes of
+[errors.md](../common/errors.md).
 
 ---
 
@@ -54,21 +55,21 @@ is made of bytes from `0x01` to `0x7F` only. The receiver reverses both steps.
 
 Raw encoding
 
-| Value             | Encoding                                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `true`, `false`   | `T`, `F`                                                                                                          |
-| integer           | `i`, decimal digits with a leading `-` if negative, then `;`. A Lua integer outside the 32-bit range is allowed here, because it is not a frame value, but must fit in 64 bits |
-| float             | `f`, then the `%.17g` text of the number (or `inf`, `-inf`), then `;`. `nan` is not a valid payload               |
-| string            | `s`, the length in bytes in decimal, `:`, then the bytes. Any byte is allowed                                     |
-| table             | `t`, the number of entries in decimal, `;`, then for every entry the key and then the value, each encoded in turn |
+| Value           | Encoding                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `true`, `false` | `T`, `F`                                                                                                                                                                       |
+| integer         | `i`, decimal digits with a leading `-` if negative, then `;`. A Lua integer outside the 32-bit range is allowed here, because it is not a frame value, but must fit in 64 bits |
+| float           | `f`, then the `%.17g` text of the number (or `inf`, `-inf`), then `;`. `nan` is not a valid payload                                                                            |
+| string          | `s`, the length in bytes in decimal, `:`, then the bytes. Any byte is allowed                                                                                                  |
+| table           | `t`, the number of entries in decimal, `;`, then for every entry the key and then the value, each encoded in turn                                                              |
 
-A payload is invalid, and `send` fails with `invalid`, if it nests tables deeper than 32 levels, if it contains itself,
+A payload is invalid, and `send` fails with `EINVAL`, if it nests tables deeper than 32 levels, if it contains itself,
 if it holds a function, thread or userdata, or if any key or value is `nan`. Metatables are not sent. The receiver builds
 plain tables. A table that is referred to twice is sent twice, as two separate copies, which is the same behaviour that
 [local SPP](spp.md#messages) has for copies.
 
 The size limit of a payload is a limit on the raw encoding: 3072 bytes, which after Base64 is 4096 characters, the
-longest string a frame may hold. A payload that is larger fails with `toolarge`. Protocols that need to send more than that
+longest string a frame may hold. A payload that is larger fails with `EMSGSIZE`. Protocols that need to send more than that
 must split it themselves, because none of them fragments.
 
 The decoder must reject anything that is not exactly one valid value with nothing after it. It must check

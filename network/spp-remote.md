@@ -13,7 +13,7 @@ not report it as supported until this notice is removed. Nothing in `ext.spp` de
 
 This specification describes how [SPP](spp.md) connections are made between programs on different computers. It
 adds nothing to the `spp` API. It makes `scope = "network"` work on `spp.listen` and `spp.connect`, which without this
-extension fail with `unsupported`. Programs written for `ext.spp` need no changes.
+extension fail with `ENOTSUP`. Programs written for `ext.spp` need no changes.
 
 SPP frames can travel in two ways. Where the OS has [`ext.rpp`](rpp.md), every frame is carried in an RPP packet, so
 that it can be addressed to one host and routed across several (see [With RPP](#with-rpp)). Where it has not, frames are
@@ -27,7 +27,7 @@ Both media below can lose messages (see [Loss](#loss)). So a
 reliable remote transport is useful, and not only for the connection semantics that DPP cannot give on any medium:
 
 - One session with one other program, in which each side finds out when the
-  other disappears (`closed`, `reset`). DPP messages reach every computer that hears them and have no notion of a peer.
+  other disappears (`EPIPE`, `ECONNRESET`). DPP messages reach every computer that hears them and have no notion of a peer.
 - Event queues are small and drop their oldest entries when they overflow, so a burst of traffic can
   silently lose messages. SPP retransmits what was lost.
 - A sender that must not overrun a slow receiver, with no application-level acknowledgement.
@@ -84,15 +84,15 @@ Consequences for SPP:
 
 An SPP segment is a frame. Every frame follows [wire.md](wire.md#frames). The segment kinds and their values are:
 
-| Position | `syn`                 | `synack`            | `data`                      | `ack`                    | `fin`            | `rst`            |
-| -------- | --------------------- | ------------------- | --------------------------- | ------------------------ | ---------------- | ---------------- |
-| 1        | `"spp"`               | `"spp"`             | `"spp"`                     | `"spp"`                  | `"spp"`          | `"spp"`          |
-| 2        | `"syn"`               | `"synack"`          | `"data"`                    | `"ack"`                  | `"fin"`          | `"rst"`          |
-| 3        | source id             | source id           | source id                   | source id                | source id        | source id        |
-| 4        | `""`                  | target id           | target id                   | target id                | target id        | target id        |
-| 5        | target port (int)     | window (int)        | seq (int)                   | ack (int)                | seq (int)        |                  |
-| 6        | source port (int)     |                     | payload (string, encoded)   | window (int)             |                  |                  |
-| 7        | window (int)          |                     |                             |                          |                  |                  |
+| Position | `syn`             | `synack`     | `data`                    | `ack`        | `fin`     | `rst`     |
+| -------- | ----------------- | ------------ | ------------------------- | ------------ | --------- | --------- |
+| 1        | `"spp"`           | `"spp"`      | `"spp"`                   | `"spp"`      | `"spp"`   | `"spp"`   |
+| 2        | `"syn"`           | `"synack"`   | `"data"`                  | `"ack"`      | `"fin"`   | `"rst"`   |
+| 3        | source id         | source id    | source id                 | source id    | source id | source id |
+| 4        | `""`              | target id    | target id                 | target id    | target id | target id |
+| 5        | target port (int) | window (int) | seq (int)                 | ack (int)    | seq (int) |           |
+| 6        | source port (int) |              | payload (string, encoded) | window (int) |           |           |
+| 7        | window (int)      |              |                           |              |           |           |
 
 - source id and target id identify the two ends of a connection. An id is 16 lowercase hexadecimal digits
   made from `crypto.SecureRNG`, so it is safe to put in a frame. An end must not use an id that belongs to another of
@@ -102,9 +102,9 @@ An SPP segment is a frame. Every frame follows [wire.md](wire.md#frames). The se
 - seq counts messages, not bytes, starting at 1 in each direction. ack is the highest `seq` that the sender
   of the `ack` has delivered in order, and 0 if none. window is the number of free places in the sender's inbox.
   A counter has to stay within 2^31 - 1 because a frame cannot hold more, so a connection that reaches 2^30 messages in
-  one direction is `reset`.
+  one direction is reset (`ECONNRESET`).
 - payload is the message in the [payload encoding](wire.md#payload-encoding): the raw encoding of the value, made
-  into Base64. A payload that is longer than 3072 bytes raw cannot be sent over the network (`toolarge`), because it
+  into Base64. A payload that is longer than 3072 bytes raw cannot be sent over the network (`EMSGSIZE`), because it
   would not fit in a frame. `conn.maxPayload` of a network connection says so (see [spp.md](spp.md)), and is the
   smaller of this and `maxPayload` from `spp.getLimits`. SPP does not fragment.
 
@@ -126,12 +126,12 @@ connection that arrive from the other medium are ignored. A server sends its `sy
 medium that the `syn` arrived on.
 
 A `syn` reaches every computer the medium reaches, so `opts.host` of `spp.connect` must be `nil` (anything else
-fails with `unsupported`), which means "whichever computer answers first". The `peer` of both ends is `{ origin =
+fails with `ENOTSUP`), which means "whichever computer answers first". The `peer` of both ends is `{ origin =
 "remote", medium = "wired" | "wireless", distance = number? }`. `distance` is only present on the wireless medium and is
 the value from the last frame received. It tells how far away the peer's access point is, and is not an identity.
 
 On the wireless medium only the sender's range counts. A `syn` can arrive while the `synack` cannot get back,
-if the server's access point has a shorter range than the distance between them. The client sees this as `timeout`,
+if the server's access point has a shorter range than the distance between them. The client sees this as `ETIMEDOUT`,
 the same as a missing server. An operating system that implements the wireless medium should leave its access points at
 the largest range, so that links work in both directions.
 
@@ -151,7 +151,7 @@ sends a bare segment on a medium, and ignores bare segments that arrive.
   to that address, and a segment of the connection that arrives from any other source address is dropped. That keeps
   `peer.host` true for the whole connection, as [spp.md](spp.md#peer-identity) requires, and means that a forged packet
   cannot redirect a connection.
-- If there is no route to `opts.host`, `connect` fails with `unreachable` at once.
+- If there is no route to `opts.host`, `connect` fails with `EHOSTUNREACH` at once.
 - A connection is not tied to a medium. Segments follow the routes, which may change during a connection. Loss and
   delay from a change are handled by retransmission like any other.
 - The `peer` of both ends is `{ origin = "remote", host = address }`. The host is the source address in the packets, and
@@ -174,8 +174,8 @@ sends a bare segment on a medium, and ignores bare segments that arrive.
    listener's backlog. An `ack` is not retransmitted, so a `data` segment for a half-open connection counts as the `ack`
    as well: it completes the connection and is then handled as data.
 4. If no `synack` arrives, the client repeats the `syn` up to 4 more times, one second apart (two seconds with RPP, as
-   for retransmission, see [Sending data](#sending-data)), and then fails with `timeout`. If `opts.timeout` of
-   `spp.connect` passes earlier, it fails with `timeout` at that point. A longer `opts.timeout` does not make the client
+   for retransmission, see [Sending data](#sending-data)), and then fails with `ETIMEDOUT`. If `opts.timeout` of
+   `spp.connect` passes earlier, it fails with `ETIMEDOUT` at that point. A longer `opts.timeout` does not make the client
    keep trying after the last repeat. If an OS without RPP implements both media, the client sends the `syn` on both,
    and the first `synack` decides the medium.
 
@@ -211,8 +211,8 @@ so a receiver never buffers anything out of order.
 acknowledged like data. After `conn:close()` returns, the operating system keeps the state of the connection, and goes
 on retransmitting, until the `fin` has been acknowledged or the retransmissions have run out, even if the program has
 ended. That is what makes messages that were already sent still arrive, as [spp.md](spp.md#closing) promises. When a
-receiver has delivered a `fin` in order, `recv` returns `closed` once the inbox is empty. `rst` ends a connection at
-once in both ends with `reset`, and is sent when a program is killed, a limit is hit, retransmissions have run out, or
+receiver has delivered a `fin` in order, `recv` returns `EPIPE` once the inbox is empty. `rst` ends a connection at
+once in both ends with `ECONNRESET`, and is sent when a program is killed, a limit is hit, retransmissions have run out, or
 the listener of a connection that has not been accepted yet is closed (a half-open connection of that listener is simply
 dropped). A `rst` that is lost is not retransmitted, and the other end finds out when its own retransmissions run out.
 

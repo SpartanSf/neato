@@ -34,14 +34,14 @@ transport protocols use RPP to address another computer, and programs reach it t
 
 ### Terms
 
-| Term      | Meaning                                                                                                              |
-| --------- | -------------------------------------------------------------------------------------------------------------------- |
-| host      | Any computer that takes part in RPP. Every host has one address.                                                     |
-| router    | A host that also passes packets on that are not for itself. Every other host is an end host.                         |
-| interface | One medium that a host is connected to: the network cable graph (`wired`), or an Access Point (`wireless`).          |
-| neighbour | A host that this host can hear directly on an interface, without a router in between.                                |
-| link      | The path between a host and one neighbour.                                                                           |
-| frame     | A list of values as defined in [wire.md](wire.md#frames). An RPP packet is a frame.                                  |
+| Term      | Meaning                                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------------------------- |
+| host      | Any computer that takes part in RPP. Every host has one address.                                            |
+| router    | A host that also passes packets on that are not for itself. Every other host is an end host.                |
+| interface | One medium that a host is connected to: the network cable graph (`wired`), or an Access Point (`wireless`). |
+| neighbour | A host that this host can hear directly on an interface, without a router in between.                       |
+| link      | The path between a host and one neighbour.                                                                  |
+| frame     | A list of values as defined in [wire.md](wire.md#frames). An RPP packet is a frame.                         |
 
 ---
 
@@ -76,7 +76,7 @@ sends a `hello` at once. Connections that were using the old address will not su
 A host has one interface for each medium it can use, at most one of each in this version:
 
 | Interface    | Medium                                                                         | Sends with                           |
-| ----------   | ----------------------------------------------------------------------------   | ----------------------------------   |
+| ------------ | ------------------------------------------------------------------------------ | ------------------------------------ |
 | `"wired"`    | `io.broadcastLocal`: all hosts on the same network cable graph                 | `io.broadcastLocal(...)`             |
 | `"wireless"` | an Access Point: all Access Points in range (see [Media](spp-remote.md#media)) | `broadcast(...)` of the Access Point |
 
@@ -108,7 +108,7 @@ An RPP packet is one frame:
 ```
 
 | Position | Name        | Type    | Meaning                                                                                                                      |
-| -------- | ----------- | ------- | ----------------------------------------------------------------------------------------------------------                   |
+| -------- | ----------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | 1        | protocol    | string  | Always `"rpp"`.                                                                                                              |
 | 2        | destination | string  | Address of the host the packet is for, or the broadcast address.                                                             |
 | 3        | source      | string  | Address of the host that made the packet. A router leaves it as it is.                                                       |
@@ -152,11 +152,11 @@ every queue with error messages. A program can see the cause with `rpp.ping` and
 
 A host that sends a packet to another host looks the destination up. If it is a bidirectional neighbour,
 `next` is the destination. If there is a route, `next` is the route's next hop. If neither, the send fails with
-`unreachable` at once. A packet to the broadcast address is sent with `next` set to the broadcast address, on every
+`EHOSTUNREACH` at once. A packet to the broadcast address is sent with `next` set to the broadcast address, on every
 interface. `ttl` starts at 256, except for control frames to the broadcast address, which are always sent with 1.
 
 A packet to the host's own address is never sent. The routing table does not contain the host's own address, so the send
-fails with `unreachable`. Connections between programs on the same computer are `ext.spp` with scope `"local"` and never
+fails with `EHOSTUNREACH`. Connections between programs on the same computer are `ext.spp` with scope `"local"` and never
 use RPP, and `spp.connect` with scope `"network"` never looks on this computer (see [spp.md](spp.md#scope)).
 
 ---
@@ -166,12 +166,12 @@ use RPP, and `spp.connect` with scope `"network"` never looks on this computer (
 RPP uses its own frames, with the protocol name `"rcp"` (the Routing Control Protocol), for neighbours, routes and
 echo. They are carried in RPP packets like any other transport frame.
 
-| Frame                              | Values                       | Meaning                                                                                                    |
-| ---------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `("rcp", "hello", role, heard)`    | role: `"h"` or `"r"`<br>heard: string | A host announces itself. `role` is `"r"` for a router and `"h"` for an end host. `heard` is a comma separated list of the addresses that the host has heard on this interface in the last 120 seconds, at most 300, or `""`. |
-| `("rcp", "vector", entries)`       | string                       | A router tells its neighbours what it can reach. Entries are comma separated, and each is `address:metric:via` (see [Routes](#routes)), at most 140 entries. A longer table is sent in several frames. |
-| `("rcp", "echo", id)`              | id: string, 1 to 16 characters from `0-9a-f` | Asks the destination to answer.                                                          |
-| `("rcp", "echoreply", id)`         | the same string              | The answer to an echo, sent to the address the echo came from.                                              |
+| Frame                           | Values                                       | Meaning                                                                                                                                                                                                                      |
+| ------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `("rcp", "hello", role, heard)` | role: `"h"` or `"r"`<br>heard: string        | A host announces itself. `role` is `"r"` for a router and `"h"` for an end host. `heard` is a comma separated list of the addresses that the host has heard on this interface in the last 120 seconds, at most 300, or `""`. |
+| `("rcp", "vector", entries)`    | string                                       | A router tells its neighbours what it can reach. Entries are comma separated, and each is `address:metric:via` (see [Routes](#routes)), at most 140 entries. A longer table is sent in several frames.                       |
+| `("rcp", "echo", id)`           | id: string, 1 to 16 characters from `0-9a-f` | Asks the destination to answer.                                                                                                                                                                                              |
+| `("rcp", "echoreply", id)`      | the same string                              | The answer to an echo, sent to the address the echo came from.                                                                                                                                                               |
 
 `hello` and `vector` are always sent to the broadcast address with `ttl` 1, and a router never passes them on.
 `echo` and `echoreply` are ordinary routed packets.
@@ -239,17 +239,17 @@ which is why a vector has to be sent in pieces when there are more than 140 host
 
 ### Timers
 
-| Name                       | Value                                |
-| -------------------------- | ------------------------------------ |
-| Hello interval             | 30 s, +- 25%                          |
-| First hello after start    | 0 to 2 s                             |
-| Extra hello for a new host | 0 to 1 s                             |
-| Neighbour timeout          | 120 s                                |
-| Vector interval            | 30 s, +- 25%                          |
-| Triggered vector           | at most once per 5 s per interface   |
-| Route timeout              | 180 s                                |
-| Address change delay       | 0 to 5 s                             |
-| Largest metric / ttl       | 255 / 256                            |
+| Name                       | Value                              |
+| -------------------------- | ---------------------------------- |
+| Hello interval             | 30 s, +- 25%                       |
+| First hello after start    | 0 to 2 s                           |
+| Extra hello for a new host | 0 to 1 s                           |
+| Neighbour timeout          | 120 s                              |
+| Vector interval            | 30 s, +- 25%                       |
+| Triggered vector           | at most once per 5 s per interface |
+| Route timeout              | 180 s                              |
+| Address change delay       | 0 to 5 s                           |
+| Largest metric / ttl       | 255 / 256                          |
 
 ---
 
@@ -273,27 +273,27 @@ which is why a vector has to be sent in pieces when there are more than 140 host
 
 ### The `rpp` API
 
-| Name           | Description                                                                                                                                                              | Arguments                         | Returns                                        |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ---------------------------------------------- |
-| rpp.getAddress | The address of this host.                                                                                                                                                | none                              | address (string)                               |
-| rpp.getInterfaces | The interfaces of this host.                                                                                                                                         | none                              | array of `{name = string, up = boolean}`       |
-| rpp.getNeighbors | The neighbours that are currently known.                                                                                                                              | none                              | array of `{address, interface, role, bidirectional, age, distance}` |
-| rpp.getRoutes  | The routing table.                                                                                                                                                       | none                              | array of `{address, next, interface, metric, age}` |
-| rpp.isRouter   | Whether this host passes packets on.                                                                                                                                     | none                              | boolean                                        |
-| rpp.setRouter  | Turns forwarding on or off. A host is a router by default if it has two interfaces, and an end host otherwise. An OS may refuse to let a program do this (`denied`).                                | enabled (boolean)                 | true, or nil, code and message                 |
-| rpp.ping       | Sends an echo to `address` and waits for the answer. Yields. Returns the round trip time in seconds.                                                                      | address (string), timeout (number?) | seconds (number), or nil, code and message   |
+| Name              | Description                                                                                                                                                          | Arguments                           | Returns                                                             |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------- |
+| rpp.getAddress    | The address of this host.                                                                                                                                            | none                                | address (string)                                                    |
+| rpp.getInterfaces | The interfaces of this host.                                                                                                                                         | none                                | array of `{name = string, up = boolean}`                            |
+| rpp.getNeighbors  | The neighbours that are currently known.                                                                                                                             | none                                | array of `{address, interface, role, bidirectional, age, distance}` |
+| rpp.getRoutes     | The routing table.                                                                                                                                                   | none                                | array of `{address, next, interface, metric, age}`                  |
+| rpp.isRouter      | Whether this host passes packets on.                                                                                                                                 | none                                | boolean                                                             |
+| rpp.setRouter     | Turns forwarding on or off. A host is a router by default if it has two interfaces, and an end host otherwise. An OS may refuse to let a program do this (`EACCES`). | enabled (boolean)                   | true, or nil, code and message                                      |
+| rpp.ping          | Sends an echo to `address` and waits for the answer. Yields. Returns the round trip time in seconds.                                                                 | address (string), timeout (number?) | seconds (number), or nil, code and message                          |
 
 `age` is the number of seconds since the entry was last refreshed. `distance` is only present on `wireless` neighbours, in
 blocks, and is `nil` otherwise. The routing table does not include the host's own address.
 
-The failure codes are, as in [SPP](spp.md#failure-codes), part of this specification:
+The failure codes are the shared NEATO codes defined in [errors.md](../common/errors.md):
 
-| Code          | Meaning                                                              |
-| ------------- | -------------------------------------------------------------------- |
-| `unreachable` | There is no route to the address.                                    |
-| `timeout`     | The timeout passed before an answer came.                            |
-| `invalid`     | An address is not valid.                                             |
-| `denied`      | The OS does not allow this program to do this.                       |
+| Code           | Meaning in RPP                                 |
+| -------------- | ---------------------------------------------- |
+| `EHOSTUNREACH` | There is no route to the address.              |
+| `ETIMEDOUT`    | The timeout passed before an answer came.      |
+| `EINVAL`       | An address is not valid.                       |
+| `EACCES`       | The OS does not allow this program to do this. |
 
 ---
 

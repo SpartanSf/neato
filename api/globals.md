@@ -2,7 +2,7 @@
 
 Extension: `core`
 
-Version: 1
+Version: 2
 
 ---
 
@@ -18,6 +18,10 @@ extension it does not report. This applies to the raw NEET Computers APIs as wel
 and `internet` are not part of a NEATO environment. Their names are only available through the extensions that will
 replace them (the reserved names in the [main README](../README.md)). The name `event` is used by NEATO, but it is the
 NEATO [event](event.md) API and not the NEET Computers one.
+
+A global function that can fail reports the failure as `nil`, an error code, then a message, as defined in
+[errors.md](../common/errors.md). A wrong argument type raises an error instead. Each API specification lists the exact
+codes its functions must use.
 
 ### NEATO `core` globals
 
@@ -52,6 +56,8 @@ fs
   resolve
   getDisks
   getPartitions
+  getPoint
+  getPoints
 
 // Defined in api/term.md
 term
