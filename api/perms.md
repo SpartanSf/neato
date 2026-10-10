@@ -4,7 +4,7 @@ Extension: `ext.perms`
 
 Version: 1
 
-Requires: `core`
+Requires: `core`, `ext.user`
 
 ---
 
